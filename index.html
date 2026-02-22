@@ -38,7 +38,7 @@
             background: var(--card); padding: 20px; border-radius: 15px; 
             border: 1px solid var(--border); box-shadow: var(--shadow);
             backdrop-filter: blur(12px);
-            will-change: transform; /* Boost performance */
+            will-change: transform;
         }
 
         header { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
@@ -79,7 +79,7 @@
             max-height: 65vh; overflow-y: auto; overflow-x: auto; 
             border-radius: 12px; border: 1px solid var(--border); 
             background: var(--card); margin-top: 15px;
-            -webkit-overflow-scrolling: touch; /* Smooth mobile scroll */
+            -webkit-overflow-scrolling: touch;
         }
         
         table { width: 100%; border-collapse: collapse; min-width: 800px; table-layout: fixed; }
@@ -95,7 +95,6 @@
             font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
 
-        /* Optimization for large lists */
         tbody tr { content-visibility: auto; contain-intrinsic-size: 50px; }
 
         .client-tag { 
@@ -105,6 +104,16 @@
         .tag-gp { background: var(--gp); }
         .tag-robi { background: var(--robi); }
         .tag-bl { background: var(--bl); color: #000; }
+
+        /* Map Drop Button Style */
+        .map-drop-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(0, 210, 255, 0.1); color: var(--primary);
+            padding: 6px 12px; border-radius: 20px; text-decoration: none;
+            font-size: 12px; font-weight: 700; border: 1px solid var(--primary);
+            transition: 0.2s;
+        }
+        .map-drop-btn:hover { background: var(--primary); color: #000; }
 
         .op-btn {
             padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer;
@@ -243,7 +252,7 @@
 
     function debounceFilter() {
         clearTimeout(filterTimeout);
-        filterTimeout = setTimeout(handleFilter, 250); // Delay search for smoothness
+        filterTimeout = setTimeout(handleFilter, 250);
     }
 
     function toggleTheme() {
@@ -301,20 +310,19 @@
         const tbody = document.getElementById('fullTable');
         const filtered = q ? masterData.slice(1).filter(r => r.some(cell => cell?.toString().toUpperCase().includes(q))) : masterData.slice(1);
 
-        // Optimizing DOM injection
         let html = '';
         for (let i = 0; i < filtered.length; i++) {
             const r = filtered[i];
             const originalIndex = masterData.indexOf(r);
-            const mapLink = (r[5] && r[6]) ? `https://www.google.com/maps?q=${r[5]},${r[6]}` : null;
+            // Updated Map logic - Only showing DROP button
+            const mapLink = (r[5] && r[6] && r[5] !== "0" && r[6] !== "0") ? `https://www.google.com/maps?q=${r[5]},${r[6]}` : null;
             
             html += `<tr>
                 <td style="color:var(--primary); font-weight:700;">${r[0] || '-'}</td>
                 <td><code style="background:rgba(120,120,120,0.1); padding:4px 8px; border-radius:4px; font-family: monospace; font-size:14px; color:var(--secondary);">${r[1] || '-'}</code></td>
                 <td><div style="font-size:12px; opacity:0.6;">${r[3] || '-'}</div><b>${r[4] || '-'}</b></td>
                 <td>
-                    <span style="font-size:12px; font-family:monospace;">${r[5] || '0'}, ${r[6] || '0'}</span>
-                    ${mapLink ? `<a href="${mapLink}" target="_blank" style="color:var(--primary); margin-left:8px;"><i class="fas fa-location-arrow"></i></a>` : ''}
+                    ${mapLink ? `<a href="${mapLink}" target="_blank" class="map-drop-btn"><i class="fas fa-map-marker-alt"></i> DROP</a>` : '<span style="opacity:0.3; font-size:12px;">NO DATA</span>'}
                 </td>
                 <td><span class="client-tag ${getClientClass(r[7])}">${r[7] || 'N/A'}</span></td>
                 <td>
