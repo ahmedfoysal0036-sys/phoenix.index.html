@@ -56,11 +56,12 @@
             .table-header input { width: 100% !important; flex: none !important; }
         }
 
-        input { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; outline: none; width: -webkit-fill-available; }
+        input, textarea { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; outline: none; width: -webkit-fill-available; font-family: inherit; }
+        textarea { resize: none; min-height: 80px; line-height: 1.5; }
         
         /* Tooltip style for copy */
-        .copy-active input { cursor: pointer; caret-color: transparent; }
-        .copy-active input:hover { border-color: var(--success); }
+        .copy-active input, .copy-active textarea { cursor: pointer; caret-color: transparent; }
+        .copy-active input:hover, .copy-active textarea:hover { border-color: var(--success); }
 
         button { border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 5px; font-size: 12px; }
         .btn-primary { background: var(--primary); color: #fff; }
@@ -88,7 +89,7 @@
 
 <div class="container">
     <header>
-        <h2><i class="fas fa-shield-alt"></i> Phoneix database 3.0</h2>
+        <h2><i class="fas fa-shield-alt"></i> PHOENIX DATABASE 3.0</h2>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;">
             <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
             <input type="file" id="fileInput" style="display:none">
@@ -115,7 +116,7 @@
         <div class="form-grid" id="inputGrid">
             <input type="text" id="editName" placeholder="Site Name" class="half" onclick="handleCopy(this)">
             <input type="text" id="editIP" placeholder="IP Address" class="half" onclick="handleCopy(this)">
-            <input type="text" id="editKey" placeholder="Critical Key Info" class="full" onclick="handleCopy(this)">
+            <textarea id="editKey" placeholder="Zone: &#10;Key info: &#10;SMU Support: &#10;MPLS POC:" class="full" onclick="handleCopy(this)"></textarea>
             <input type="text" id="editNode" placeholder="Node Address" class="half" onclick="handleCopy(this)">
             <input type="text" id="editModel" placeholder="Model" class="half" onclick="handleCopy(this)">
             <input type="text" id="editLat" placeholder="Lat" onclick="handleCopy(this)">
@@ -124,7 +125,7 @@
         </div>
         <div style="display: flex; gap: 10px; margin-top: 15px;">
             <button id="saveBtn" class="btn-primary" style="flex: 1; justify-content: center;" onclick="updateMasterData()">
-                <i class="fas fa-Commit Change"></i> Commit change
+                <i class="fas fa-save"></i> Commit Change
             </button>
             <button class="btn-reset" onclick="toggleForm('hide')">Close</button>
         </div>
@@ -183,7 +184,7 @@
         
         navigator.clipboard.writeText(ele.value).then(() => {
             const originalMsg = document.getElementById('statusMsg').innerHTML;
-            document.getElementById('statusMsg').innerHTML = `<i class="fas fa-copy" style="color:var(--success)"></i> Copied: ${ele.value}`;
+            document.getElementById('statusMsg').innerHTML = `<i class="fas fa-copy" style="color:var(--success)"></i> Copied to Clipboard!`;
             setTimeout(() => {
                 document.getElementById('statusMsg').innerHTML = originalMsg;
             }, 2000);
@@ -271,7 +272,7 @@
         const section = document.getElementById('editSection');
         const saveBtn = document.getElementById('saveBtn');
         const grid = document.getElementById('inputGrid');
-        const allInputs = document.querySelectorAll('#editSection input');
+        const allInputs = document.querySelectorAll('#editSection input, #editSection textarea');
         
         if(mode === 'hide') { section.style.display = 'none'; return; }
         
@@ -279,7 +280,6 @@
         saveBtn.style.display = (mode === 'view' ? 'none' : 'flex');
         isViewMode = (mode === 'view');
         
-        // Logical Update: Readonly toggle
         allInputs.forEach(input => {
             input.readOnly = isViewMode;
         });
@@ -288,7 +288,7 @@
         else grid.classList.remove('copy-active');
 
         document.getElementById('formTitle').innerHTML = mode === 'add' ? 'ADD NEW SITE' : 
-            (mode === 'view' ? 'SITE VIEW <span style="font-size:10px; color:var(--success)">(Tap to Copy)</span>' : 'EDIT SITE');
+            (mode === 'view' ? 'SITE VIEW <span style="font-size:10px; color:var(--success)">(Tap to Copy All)</span>' : 'EDIT SITE');
         
         if(mode === 'add') allInputs.forEach(i => i.value = '');
         window.scrollTo({top: 0, behavior: 'smooth'});
@@ -299,20 +299,29 @@
 
     function fillForm(index) {
         const row = masterData[index];
-        document.getElementById('editName').value = row[0];
-        document.getElementById('editIP').value = row[1];
-        document.getElementById('editKey').value = row[2];
-        document.getElementById('editNode').value = row[3];
-        document.getElementById('editModel').value = row[4];
-        document.getElementById('editLat').value = row[5];
-        document.getElementById('editLong').value = row[6];
-        document.getElementById('editClient').value = row[7];
+        document.getElementById('editName').value = row[0] || '';
+        document.getElementById('editIP').value = row[1] || '';
+        document.getElementById('editKey').value = row[2] || '';
+        document.getElementById('editNode').value = row[3] || '';
+        document.getElementById('editModel').value = row[4] || '';
+        document.getElementById('editLat').value = row[5] || '';
+        document.getElementById('editLong').value = row[6] || '';
+        document.getElementById('editClient').value = row[7] || '';
     }
 
     function updateMasterData() {
         const name = document.getElementById('editName').value.trim();
         if(!name) return;
-        const newRow = [name, document.getElementById('editIP').value, document.getElementById('editKey').value, document.getElementById('editNode').value, document.getElementById('editModel').value, document.getElementById('editLat').value, document.getElementById('editLong').value, document.getElementById('editClient').value];
+        const newRow = [
+            name, 
+            document.getElementById('editIP').value, 
+            document.getElementById('editKey').value, 
+            document.getElementById('editNode').value, 
+            document.getElementById('editModel').value, 
+            document.getElementById('editLat').value, 
+            document.getElementById('editLong').value, 
+            document.getElementById('editClient').value
+        ];
         const idx = masterData.findIndex((r, i) => i > 0 && r[0]?.toString().toUpperCase() === name.toUpperCase());
         if(idx !== -1) masterData[idx] = newRow;
         else masterData.push(newRow);
@@ -325,7 +334,7 @@
         const ws = XLSX.utils.aoa_to_sheet(masterData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "MasterData");
-        XLSX.writeFile(wb, "Professor_V3_Mobile.xlsx");
+        XLSX.writeFile(wb, "Phoenix_Database_V3.xlsx");
     }
 </script>
 </body>
