@@ -105,7 +105,6 @@
         .tag-robi { background: var(--robi); }
         .tag-bl { background: var(--bl); color: #000; }
 
-        /* Map Drop Button Style */
         .map-drop-btn {
             display: inline-flex; align-items: center; gap: 6px;
             background: rgba(0, 210, 255, 0.1); color: var(--primary);
@@ -113,7 +112,7 @@
             font-size: 12px; font-weight: 700; border: 1px solid var(--primary);
             transition: 0.2s;
         }
-        .map-drop-btn:hover { background: var(--primary); color: #000; }
+        .map-Open Map-btn:hover { background: var(--primary); color: #000; }
 
         .op-btn {
             padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer;
@@ -145,6 +144,7 @@
             <input type="file" id="fileInput" style="display:none">
             <button onclick="document.getElementById('fileInput').click()" class="btn" style="background: var(--secondary); color: white;"><i class="fas fa-file-import"></i> Import</button>
             <button onclick="exportMaster()" class="btn" style="background: var(--success); color:#000;"><i class="fas fa-file-export"></i> Export</button>
+            <button onclick="pushToTelegram()" class="btn" style="background: #0088cc; color:#fff;"><i class="fas fa-paper-plane"></i> Push</button>
             <button onclick="hardReset()" class="btn" style="background: transparent; border: 1px solid var(--danger); color: var(--danger);"><i class="fas fa-trash"></i> Wipe</button>
         </div>
     </header>
@@ -238,6 +238,10 @@
     let isViewMode = false;
     let filterTimeout;
 
+    // Telegram Configuration
+    const TG_TOKEN = '8582534427:AAHq4TfwFqBIy1wU9mp6bDNQGSeSD49yX94';
+    const TG_CHAT_ID = '682844989';
+
     window.onload = () => {
         const savedTheme = localStorage.getItem('phoenix_theme') || 'dark';
         document.body.setAttribute('data-theme', savedTheme);
@@ -314,7 +318,6 @@
         for (let i = 0; i < filtered.length; i++) {
             const r = filtered[i];
             const originalIndex = masterData.indexOf(r);
-            // Updated Map logic - Only showing DROP button
             const mapLink = (r[5] && r[6] && r[5] !== "0" && r[6] !== "0") ? `https://www.google.com/maps?q=${r[5]},${r[6]}` : null;
             
             html += `<tr>
@@ -322,7 +325,7 @@
                 <td><code style="background:rgba(120,120,120,0.1); padding:4px 8px; border-radius:4px; font-family: monospace; font-size:14px; color:var(--secondary);">${r[1] || '-'}</code></td>
                 <td><div style="font-size:12px; opacity:0.6;">${r[3] || '-'}</div><b>${r[4] || '-'}</b></td>
                 <td>
-                    ${mapLink ? `<a href="${mapLink}" target="_blank" class="map-drop-btn"><i class="fas fa-map-marker-alt"></i> DROP</a>` : '<span style="opacity:0.3; font-size:12px;">NO DATA</span>'}
+                    ${mapLink ? `<a href="${mapLink}" target="_blank" class="map-drop-btn"><i class="fas fa-map-marker-alt"></i> Open Map</a>` : '<span style="opacity:0.3; font-size:12px;">NO DATA</span>'}
                 </td>
                 <td><span class="client-tag ${getClientClass(r[7])}">${r[7] || 'N/A'}</span></td>
                 <td>
@@ -405,6 +408,44 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "MasterData");
         XLSX.writeFile(wb, "Phoenix_DB_v3.1.xlsx");
+    }
+
+    // TELEGRAM PUSH LOGIC - NO MODIFICATION TO EXISTING LOGIC
+    async function pushToTelegram() {
+        if(masterData.length === 0) { alert("No data to push!"); return; }
+        
+        const status = document.getElementById('statusMsg');
+        const original = status.innerHTML;
+        status.innerHTML = `<i class="fas fa-sync fa-spin"></i> Pushing to Telegram...`;
+
+        try {
+            // Generate Excel Buffer
+            const ws = XLSX.utils.aoa_to_sheet(masterData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "MasterData");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const formData = new FormData();
+            formData.append('chat_id', TG_CHAT_ID);
+            formData.append('document', blob, `Phoenix_Backup_${new Date().toLocaleDateString()}.xlsx`);
+            formData.append('caption', `📊 PHOENIX ENGINE BACKUP\n🕒 Sync Time: ${new Date().toLocaleString()}\n🌐 Sites: ${masterData.length - 1}`);
+
+            const response = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if(response.ok) {
+                status.innerHTML = `<i class="fas fa-check-double" style="color:var(--success)"></i> Backup Sent Successfully!`;
+            } else {
+                throw new Error("Push Failed");
+            }
+        } catch (err) {
+            status.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> Push Error: ${err.message}`;
+        } finally {
+            setTimeout(() => status.innerHTML = original, 3000);
+        }
     }
 </script>
 </body>
