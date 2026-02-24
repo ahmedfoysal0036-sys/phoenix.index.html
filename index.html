@@ -135,11 +135,14 @@
             font-weight: 600; font-size: 12px; transition: 0.2s;
         }
 
-        .theme-toggle {
+        .theme-toggle, .logout-btn {
             background: var(--input-bg); color: var(--text);
             border: 1px solid var(--border); width: 40px; height: 40px;
             border-radius: 10px; cursor: pointer; font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.3s;
         }
+        .logout-btn:hover { color: var(--danger); border-color: var(--danger); background: rgba(255, 75, 43, 0.1); }
 
         #inputGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
         .input-box {
@@ -168,9 +171,12 @@
 <div id="mainApp">
     <div class="container">
         <header>
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <button onclick="toggleTheme()" class="theme-toggle">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button onclick="toggleTheme()" class="theme-toggle" title="Toggle Theme">
                     <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button onclick="logout()" class="logout-btn" title="Logout System">
+                    <i class="fas fa-sign-out-alt"></i>
                 </button>
                 <h2><i class="fas fa-bolt"></i> PHOENIX V3.0</h2>
             </div>
@@ -260,14 +266,23 @@
 
 <script>
     // Security Logic (Encrypted Layer)
-    const _0x4f22 = ["YWhtZWRmb3lzYWwwMDM2QGdtYWlsLmNvbQ==", "R2VtaW5pXzIwMjY="]; // Base64 Encoded
+    const _0x4f22 = [
+        "YWhtZWRmb3lzYWwwMDM2QGdtYWlsLmNvbQ==", // ahmedfoysal0036@gmail.com
+        "R2VtaW5pXzIwMjY=",                     // Gemini_2026
+        "RGhhbm1vbmRpU0M=",                     // DhanmondiSC
+        "RGhhbm1vbmRpQDEyMw==",                 // Dhanmondi@123
+        "Nzg3ODk4"                               // 787898
+    ];
     
     function verifyAccess() {
         const u = document.getElementById('userIn').value;
         const p = document.getElementById('passIn').value;
         const err = document.getElementById('authError');
         
-        if (u === atob(_0x4f22[0]) && p === atob(_0x4f22[1])) {
+        const auth1 = (u === atob(_0x4f22[0]) && p === atob(_0x4f22[1]));
+        const auth2 = (u === atob(_0x4f22[2]) && p === atob(_0x4f22[3]));
+
+        if (auth1 || auth2) {
             document.getElementById('loginGate').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             sessionStorage.setItem('phoenix_auth', 'active');
@@ -277,7 +292,15 @@
         }
     }
 
-    // Canvas Animation (Personality Match)
+    // Logout Function
+    function logout() {
+        if(confirm("Are you sure you want to logout?")) {
+            sessionStorage.removeItem('phoenix_auth');
+            location.reload();
+        }
+    }
+
+    // Canvas Animation
     const canvas = document.getElementById('canvasBg');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -285,6 +308,7 @@
     function initCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        particles = [];
         for(let i=0; i<100; i++) {
             particles.push({
                 x: Math.random() * canvas.width,
@@ -315,6 +339,7 @@
         });
         requestAnimationFrame(animate);
     }
+    window.addEventListener('resize', initCanvas);
     initCanvas(); animate();
 
     // Original Core Logic (Unchanged)
@@ -485,13 +510,28 @@
         toggleForm('hide');
     }
 
-    function hardReset() { if(confirm("Clear local cache?")) { localStorage.removeItem('professor_db_v3'); location.reload(); } }
+    function hardReset() { 
+        const pass = prompt("Enter Security Key to Wipe Cache:");
+        if(pass === atob(_0x4f22[4])) {
+            if(confirm("Are you absolutely sure?")) { 
+                localStorage.removeItem('professor_db_v3'); 
+                location.reload(); 
+            }
+        } else {
+            alert("Invalid Security Key.");
+        }
+    }
     
     function exportMaster() {
-        const ws = XLSX.utils.aoa_to_sheet(masterData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "MasterData");
-        XLSX.writeFile(wb, "Phoenix_Export.xlsx");
+        const pass = prompt("Enter Security Key to Export:");
+        if(pass === atob(_0x4f22[4])) {
+            const ws = XLSX.utils.aoa_to_sheet(masterData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "MasterData");
+            XLSX.writeFile(wb, "Phoenix_Export.xlsx");
+        } else {
+            alert("Invalid Security Key.");
+        }
     }
 
     async function pushToTelegram() {
