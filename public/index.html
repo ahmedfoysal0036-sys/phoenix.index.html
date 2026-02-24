@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phoenix Controller 3.2 - Professor Edition</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { 
+            --primary: #00d2ff; --secondary: #0081a7; --bg: #0b131e; 
+            --card: rgba(21, 32, 43, 0.85); --text: #e1e8ed;
+            --success: #00f5d4; --danger: #ff4b2b;
+            --gp: #005a9c; --robi: #e30613; --bl: #ff8200;
+            --input-bg: #192734; --border: #38444d;
+            --header-bg: #1c2732;
+            --shadow: 0 15px 35px rgba(0,0,0,0.4);
+            --navy: #0a192f;
+        }
+
+        /* Login Page Styles */
+        #loginGate {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050a10; z-index: 10000; display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+
+        .auth-card {
+            background: rgba(10, 25, 47, 0.9); padding: 40px; border-radius: 20px;
+            border: 1px solid var(--primary); box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
+            width: 350px; text-align: center; position: relative; z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-card h1 { color: var(--primary); font-size: 24px; margin-bottom: 30px; letter-spacing: 2px; }
+
+        .auth-input {
+            width: 100%; padding: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 8px; color: white; outline: none;
+            box-sizing: border-box; transition: 0.3s;
+        }
+
+        .auth-input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
+
+        .auth-btn {
+            width: 100%; padding: 12px; background: var(--primary); color: #000;
+            border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s;
+        }
+
+        .auth-btn:hover { background: #fff; transform: translateY(-2px); }
+
+        /* Background Animation Canvas */
+        #canvasBg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.4; }
+
+        /* The Main Dashboard (Hidden initially) */
+        #mainApp { display: none; }
+
+        /* Original Styles Continued */
+        [data-theme="light"] {
+            --bg: #e2e8f0; --card: rgba(255, 255, 255, 0.8); --text: #0a192f;
+            --input-bg: rgba(255, 255, 255, 0.9); --border: #cbd5e1;
+            --header-bg: #f1f5f9; --primary: #0a192f; --secondary: #1e293b;
+            --shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        body { 
+            margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: var(--bg); color: var(--text);
+            transition: all 0.3s ease; line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { 
+            width: 95%; max-width: 1350px; margin: 15px auto; 
+            background: var(--card); padding: 25px; border-radius: 20px; 
+            border: 1px solid var(--border); box-shadow: var(--shadow);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        }
+
+        header { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+        @media (min-width: 768px) { header { flex-direction: row; justify-content: space-between; } }
+        header h2 { margin: 0; color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 10px; }
+
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .btn {
+            padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer;
+            font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;
+            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn:active { transform: scale(0.96); }
+
+        .stats-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            gap: 15px; margin-bottom: 25px; 
+        }
+        .stat-card { 
+            background: rgba(120, 120, 120, 0.05); padding: 18px; border-radius: 15px; 
+            border: 1px solid var(--border); text-align: center;
+        }
+        .stat-card h4 { margin: 0; font-size: 10px; opacity: 0.7; text-transform: uppercase; }
+        .stat-card p { margin: 5px 0 0; font-size: 24px; font-weight: 800; }
+
+        .search-wrapper { position: relative; width: 100%; max-width: 300px; }
+        .search-input {
+            width: 100%; padding: 12px 15px 12px 40px; background: var(--input-bg);
+            border: 2px solid var(--border); color: var(--text);
+            border-radius: 30px; font-size: 14px; outline: none; transition: 0.2s;
+        }
+        .search-input:focus { border-color: var(--primary); width: 110%; }
+
+        .table-container { 
+            max-height: 60vh; overflow: auto; border-radius: 15px; 
+            border: 1px solid var(--border); margin-top: 15px;
+        }
+        
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th { 
+            position: sticky; top: 0; background: var(--header-bg); padding: 16px; 
+            color: var(--primary); font-size: 12px; text-align: left; z-index: 10;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        [data-theme="light"] td { color: #000; font-weight: 500; }
+        [data-theme="light"] .client-tag-text { color: #000 !important; font-weight: 800 !important; }
+        [data-theme="light"] .address-text { color: #000 !important; font-weight: 700 !important; }
+
+        .client-tag-text { font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+        .tag-gp-text { color: var(--gp); }
+        .tag-robi-text { color: var(--robi); }
+        .tag-bl-text { color: var(--bl); }
+
+        .op-btn {
+            padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;
+            font-weight: 600; font-size: 12px; transition: 0.2s;
+        }
+
+        .theme-toggle, .logout-btn {
+            background: var(--input-bg); color: var(--text);
+            border: 1px solid var(--border); width: 40px; height: 40px;
+            border-radius: 10px; cursor: pointer; font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { color: var(--danger); border-color: var(--danger); background: rgba(255, 75, 43, 0.1); }
+
+        #inputGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .input-box {
+            width: 100%; padding: 12px; background: var(--input-bg);
+            border: 1px solid var(--border); color: var(--text);
+            border-radius: 8px; font-size: 14px; box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div id="loginGate">
+    <canvas id="canvasBg"></canvas>
+    <div class="auth-card">
+        <h1><i class="fas fa-user-shield"></i> PHOENIX ACCESS</h1>
+        <input type="text" id="userIn" class="auth-input" placeholder="Identity (Gmail)">
+        <input type="password" id="passIn" class="auth-input" placeholder="Access Key">
+        <button onclick="verifyAccess()" class="auth-btn">AUTHORIZE SYSTEM</button>
+        <p id="authError" style="color:var(--danger); font-size:12px; margin-top:15px; display:none; font-weight:bold;">ACCESS DENIED: INVALID CREDENTIALS</p>
+    </div>
+</div>
+
+<div id="mainApp">
+    <div class="container">
+        <header>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button onclick="toggleTheme()" class="theme-toggle" title="Toggle Theme">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button onclick="logout()" class="logout-btn" title="Logout System">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+                <h2><i class="fas fa-bolt"></i> PHOENIX V3.0</h2>
+            </div>
+            <div class="btn-group">
+                <input type="file" id="fileInput" style="display:none">
+                <button onclick="document.getElementById('fileInput').click()" class="btn" style="background: var(--secondary); color: white;"><i class="fas fa-file-import"></i> Import</button>
+                <button onclick="exportMaster()" class="btn" style="background: var(--success); color:#000;"><i class="fas fa-file-export"></i> Export</button>
+                <button onclick="pushToTelegram()" class="btn" style="background: #0088cc; color:#fff;"><i class="fas fa-paper-plane"></i> Push</button>
+                <button onclick="hardReset()" class="btn" style="background: transparent; border: 1px solid var(--danger); color: var(--danger);"><i class="fas fa-trash"></i> Wipe</button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card"><h4>TOTAL SITES</h4><p id="statTotal">0</p></div>
+            <div class="stat-card"><h4>MEM CACHE</h4><p id="statMem">0 KB</p></div>
+            <div class="stat-card"><h4>SYNC STATUS</h4><p id="statTime">00:00</p></div>
+        </div>
+
+        <div style="background: rgba(120,120,120,0.08); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+            <div style="display:grid; gap:12px;">
+                <div id="ana-gp" style="display:flex; align-items:center; gap:10px; font-size:11px; font-weight:800;">
+                    <span style="width:80px;">GP</span>
+                    <div style="flex:1; height:8px; background:var(--input-bg); border-radius:10px; overflow:hidden;"><div id="barGP" style="height:100%; width:0%; background:var(--gp); transition:0.6s;"></div></div>
+                    <span id="cntGP">0</span>
+                </div>
+                <div id="ana-robi" style="display:flex; align-items:center; gap:10px; font-size:11px; font-weight:800;">
+                    <span style="width:80px;">ROBI</span>
+                    <div style="flex:1; height:8px; background:var(--input-bg); border-radius:10px; overflow:hidden;"><div id="barRobi" style="height:100%; width:0%; background:var(--robi); transition:0.6s;"></div></div>
+                    <span id="cntRobi">0</span>
+                </div>
+                <div id="ana-bl" style="display:flex; align-items:center; gap:10px; font-size:11px; font-weight:800;">
+                    <span style="width:80px;">BL</span>
+                    <div style="flex:1; height:8px; background:var(--input-bg); border-radius:10px; overflow:hidden;"><div id="barBL" style="height:100%; width:0%; background:var(--bl); transition:0.6s;"></div></div>
+                    <span id="cntBL">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <div class="search-wrapper">
+                <i class="fas fa-search" style="position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--primary); opacity:0.6;"></i>
+                <input type="text" id="searchInput" placeholder="Search Code..." onkeyup="debounceFilter()" class="search-input">
+            </div>
+            <button onclick="toggleForm('add')" class="btn" style="background:var(--primary); color:#fff; padding: 12px 25px;"><i class="fas fa-plus"></i> NEW ENTRY</button>
+        </div>
+
+        <div id="editSection" style="display:none; background:var(--card); padding:25px; border-radius:15px; border:2px solid var(--primary); margin-bottom:25px;">
+            <h3 id="formTitle" style="margin-top:0; color:var(--primary); font-size: 1.1rem;">Management</h3>
+            <div id="inputGrid">
+                <input type="text" id="editName" placeholder="Site Name" class="input-box">
+                <input type="text" id="editIP" placeholder="IP Address" class="input-box">
+                <input type="text" id="editNode" placeholder="Node Address" class="input-box">
+                <input type="text" id="editModel" placeholder="Model" class="input-box">
+                <input type="text" id="editLat" placeholder="Latitude" class="input-box">
+                <input type="text" id="editLong" placeholder="Longitude" class="input-box">
+                <input type="text" id="editClient" placeholder="Client (GP/ROBI/BL)" class="input-box">
+                <textarea id="editKey" placeholder="Notes/Keys..." class="input-box" style="grid-column: 1 / -1; min-height:80px;"></textarea>
+            </div>
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button id="saveBtn" onclick="updateMasterData()" class="btn" style="background:var(--primary); color:#fff; flex:1; justify-content:center;">SAVE RECORD</button>
+                <button onclick="toggleForm('hide')" class="btn" style="background:transparent; color:var(--text); border:1px solid var(--border);">CANCEL</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Identity</th>
+                        <th>Network IP</th>
+                        <th>Model Info</th>
+                        <th>Location</th>
+                        <th>Client</th>
+                        <th style="text-align:center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="fullTable"></tbody>
+            </table>
+        </div>
+
+        <footer style="margin-top:20px; padding:15px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+            <span id="statusMsg"><i class="fas fa-shield-alt" style="color:var(--success)"></i> System Locked & Ready.</span>
+            <span style="opacity:0.5; font-weight: 700;">PHOENIX V3.0 | PROFESSOR BUILD</span>
+        </footer>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+        databaseURL: "https://phoenixdatabase-v1-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Security Logic (Encrypted Layer)
+    const _0x4f22 = [
+        "YWhtZWRmb3lzYWwwMDM2QGdtYWlsLmNvbQ==", // ahmedfoysal0036@gmail.com
+        "R2VtaW5pXzIwMjY=",                     // Gemini_2026
+        "RGhhbm1vbmRpU0M=",                     // DhanmondiSC
+        "RGhhbm1vbmRpQDEyMw==",                 // Dhanmondi@123
+        "Nzg3ODk4"                               // 787898
+    ];
+    
+    function verifyAccess() {
+        const u = document.getElementById('userIn').value;
+        const p = document.getElementById('passIn').value;
+        const err = document.getElementById('authError');
+        
+        const auth1 = (u === atob(_0x4f22[0]) && p === atob(_0x4f22[1]));
+        const auth2 = (u === atob(_0x4f22[2]) && p === atob(_0x4f22[3]));
+
+        if (auth1 || auth2) {
+            document.getElementById('loginGate').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            sessionStorage.setItem('phoenix_auth', 'active');
+        } else {
+            err.style.display = 'block';
+            setTimeout(() => err.style.display = 'none', 3000);
+        }
+    }
+
+    function logout() {
+        if(confirm("Are you sure you want to logout?")) {
+            sessionStorage.removeItem('phoenix_auth');
+            location.reload();
+        }
+    }
+
+    // Canvas Animation
+    const canvas = document.getElementById('canvasBg');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    
+    function initCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        particles = [];
+        for(let i=0; i<100; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2
+            });
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00d2ff';
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+            if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+            
+            particles.forEach(p2 => {
+                let dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                if(dist < 100) {
+                    ctx.strokeStyle = `rgba(0, 210, 255, ${1 - dist/100})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                }
+            });
+        });
+        requestAnimationFrame(animate);
+    }
+    window.addEventListener('resize', initCanvas);
+    initCanvas(); animate();
+
+    // Original Core Logic
+    let masterData = [];
+    let isViewMode = false;
+    let filterTimeout;
+
+    const TG_TOKEN = '8582534427:AAHq4TfwFqBIy1wU9mp6bDNQGSeSD49yX94';
+    const TG_CHAT_ID = '682844989';
+
+    window.onload = () => {
+        if(sessionStorage.getItem('phoenix_auth') === 'active') {
+            document.getElementById('loginGate').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+        }
+        const savedTheme = localStorage.getItem('phoenix_theme') || 'dark';
+        document.body.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+
+        // --- FIREBASE SYNC LISTENER ---
+        db.ref('professor_master_db').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                masterData = data;
+                refreshUI_Internal(); // Sync locally without triggering another Firebase write
+            } else {
+                // Fallback to local if Firebase is empty
+                const saved = localStorage.getItem('professor_db_v3');
+                if(saved) {
+                    masterData = JSON.parse(saved);
+                    refreshUI();
+                }
+            }
+        });
+    };
+
+    function toggleTheme() {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('phoenix_theme', next);
+        updateThemeIcon(next);
+    }
+
+    function updateThemeIcon(theme) {
+        document.getElementById('themeIcon').className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    }
+
+    function debounceFilter() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(handleFilter, 200);
+    }
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            masterData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
+            refreshUI();
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    // Modified to push to Firebase
+    function refreshUI() {
+        if(masterData.length === 0) return;
+        
+        // Save to Local
+        localStorage.setItem('professor_db_v3', JSON.stringify(masterData));
+        
+        // --- PUSH TO FIREBASE ---
+        db.ref('professor_master_db').set(masterData);
+
+        refreshUI_Internal();
+    }
+
+    function refreshUI_Internal() {
+        document.getElementById('statMem').innerText = (JSON.stringify(masterData).length / 1024).toFixed(1) + " KB";
+        document.getElementById('statTime').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        updateAnalytics();
+        handleFilter();
+    }
+
+    function updateAnalytics() {
+        const rows = masterData.slice(1);
+        const total = rows.length;
+        document.getElementById('statTotal').innerText = total;
+        const count = (str) => rows.filter(r => r[7]?.toString().toUpperCase().includes(str)).length;
+        
+        const gp = count('GRAMEEN'), robi = count('ROBI'), bl = count('BANGLALINK');
+        document.getElementById('cntGP').innerText = gp;
+        document.getElementById('cntRobi').innerText = robi;
+        document.getElementById('cntBL').innerText = bl;
+
+        document.getElementById('barGP').style.width = total ? (gp/total*100) + "%" : "0%";
+        document.getElementById('barRobi').style.width = total ? (robi/total*100) + "%" : "0%";
+        document.getElementById('barBL').style.width = total ? (bl/total*100) + "%" : "0%";
+    }
+
+    function handleFilter() {
+        const q = document.getElementById('searchInput').value.trim().toUpperCase();
+        const tbody = document.getElementById('fullTable');
+        const filtered = q ? masterData.slice(1).filter(r => r.some(cell => cell?.toString().toUpperCase().includes(q))) : masterData.slice(1);
+
+        let html = '';
+        filtered.forEach(r => {
+            const originalIndex = masterData.indexOf(r);
+            const mapLink = (r[5] && r[6] && r[5] !== "0" && r[6] !== "0") ? `https://www.google.com/maps?q=${r[5]},${r[6]}` : null;
+            
+            html += `<tr>
+                <td style="color:var(--primary); font-weight:800;">${r[0] || '-'}</td>
+                <td><code style="background:rgba(120,120,120,0.1); padding:4px 8px; border-radius:4px; font-family: monospace; font-weight:700;">${r[1] || '-'}</code></td>
+                <td><div style="font-size:11px; opacity:0.6;">${r[3] || '-'}</div><b class="address-text">${r[4] || '-'}</b></td>
+                <td>
+                    ${mapLink ? `<a href="${mapLink}" target="_blank" style="color:var(--primary); text-decoration:none; font-size:12px; font-weight:700;"><i class="fas fa-map-marker-alt"></i> MAP</a>` : '<span style="opacity:0.3; font-size:11px;">N/A</span>'}
+                </td>
+                <td><span class="client-tag-text ${getClientClass(r[7])}">${r[7] || 'N/A'}</span></td>
+                <td style="text-align:center;">
+                    <div style="display:flex; gap:8px; justify-content:center;">
+                        <button onclick="quickView(${originalIndex})" class="op-btn" style="background:var(--secondary); color:#fff;"><i class="fas fa-eye"></i></button>
+                        <button onclick="quickEdit(${originalIndex})" class="op-btn" style="background:transparent; border:1px solid var(--primary); color:var(--primary);">EDIT</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function getClientClass(client) {
+        const c = client?.toString().toUpperCase() || '';
+        if(c.includes('GRAMEEN')) return 'tag-gp-text';
+        if(c.includes('ROBI')) return 'tag-robi-text';
+        if(c.includes('BANGLALINK')) return 'tag-bl-text';
+        return '';
+    }
+
+    function toggleForm(mode) {
+        const section = document.getElementById('editSection');
+        const saveBtn = document.getElementById('saveBtn');
+        const allInputs = document.querySelectorAll('#editSection .input-box');
+        
+        if(mode === 'hide') { section.style.display = 'none'; return; }
+        
+        section.style.display = 'block';
+        isViewMode = (mode === 'view');
+        saveBtn.style.display = isViewMode ? 'none' : 'block';
+        
+        allInputs.forEach(input => {
+            input.readOnly = isViewMode;
+            if(isViewMode) {
+                input.style.cursor = 'pointer';
+                input.onclick = function() {
+                    if(!this.value) return;
+                    navigator.clipboard.writeText(this.value);
+                    const status = document.getElementById('statusMsg');
+                    const original = status.innerHTML;
+                    status.innerHTML = `<i class="fas fa-copy" style="color:var(--success)"></i> Copied: ${this.value}`;
+                    setTimeout(() => status.innerHTML = original, 1500);
+                };
+            } else {
+                input.style.cursor = 'text';
+                input.onclick = null;
+            }
+        });
+
+        document.getElementById('formTitle').innerText = mode === 'add' ? 'NEW SYSTEM ENTRY' : (mode === 'view' ? 'DATA VIEW (TAP TO COPY)' : 'EDIT SITE RECORD');
+        if(mode === 'add') allInputs.forEach(i => i.value = '');
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function quickEdit(index) { fillForm(index); toggleForm('edit'); }
+    function quickView(index) { fillForm(index); toggleForm('view'); }
+
+    function fillForm(index) {
+        const row = masterData[index];
+        const ids = ['editName', 'editIP', 'editKey', 'editNode', 'editModel', 'editLat', 'editLong', 'editClient'];
+        ids.forEach((id, i) => document.getElementById(id).value = row[i] || '');
+    }
+
+    function updateMasterData() {
+        const name = document.getElementById('editName').value.trim();
+        if(!name) return;
+        const newRow = ['editName', 'editIP', 'editKey', 'editNode', 'editModel', 'editLat', 'editLong', 'editClient'].map(id => document.getElementById(id).value);
+        const idx = masterData.findIndex((r, i) => i > 0 && r[0]?.toString().toUpperCase() === name.toUpperCase());
+        if(idx !== -1) masterData[idx] = newRow;
+        else masterData.push(newRow);
+        refreshUI();
+        toggleForm('hide');
+    }
+
+    function hardReset() { 
+        const pass = prompt("Enter Security Key to Wipe Cache:");
+        if(pass === atob(_0x4f22[4])) {
+            if(confirm("Are you absolutely sure?")) { 
+                localStorage.removeItem('professor_db_v3'); 
+                db.ref('professor_master_db').remove(); // Clear Firebase too
+                location.reload(); 
+            }
+        } else {
+            alert("Invalid Security Key.");
+        }
+    }
+    
+    function exportMaster() {
+        const pass = prompt("Enter Security Key to Export:");
+        if(pass === atob(_0x4f22[4])) {
+            const ws = XLSX.utils.aoa_to_sheet(masterData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "MasterData");
+            XLSX.writeFile(wb, "Phoenix_Export.xlsx");
+        } else {
+            alert("Invalid Security Key.");
+        }
+    }
+
+    async function pushToTelegram() {
+        if(masterData.length === 0) return;
+        const status = document.getElementById('statusMsg');
+        const original = status.innerHTML;
+        status.innerHTML = `<i class="fas fa-sync fa-spin"></i> Pushing...`;
+        try {
+            const ws = XLSX.utils.aoa_to_sheet(masterData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "MasterData");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const formData = new FormData();
+            formData.append('chat_id', TG_CHAT_ID);
+            formData.append('document', blob, `Phoenix_Backup.xlsx`);
+            formData.append('caption', `📊 PHOENIX BACKUP\n🌐 Sites: ${masterData.length - 1}`);
+            const response = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`, { method: 'POST', body: formData });
+            if(response.ok) status.innerHTML = `<i class="fas fa-check-double" style="color:var(--success)"></i> Push Success!`;
+        } catch (err) { status.innerHTML = `Push Error.`; }
+        finally { setTimeout(() => status.innerHTML = original, 2000); }
+    }
+</script>
+</body>
+</html>
