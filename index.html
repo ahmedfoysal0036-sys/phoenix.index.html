@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Phoenix Controller 3.2 - Professor Edition</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -265,6 +268,13 @@
 </div>
 
 <script>
+    // --- FIREBASE INITIALIZATION ---
+    const firebaseConfig = {
+        databaseURL: "https://phoenixdatabase-v1-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     // Security Logic (Encrypted Layer)
     const _0x4f22 = [
         "YWhtZWRmb3lzYWwwMDM2QGdtYWlsLmNvbQ==", // ahmedfoysal0036@gmail.com
@@ -292,7 +302,6 @@
         }
     }
 
-    // Logout Function
     function logout() {
         if(confirm("Are you sure you want to logout?")) {
             sessionStorage.removeItem('phoenix_auth');
@@ -342,7 +351,7 @@
     window.addEventListener('resize', initCanvas);
     initCanvas(); animate();
 
-    // Original Core Logic (Unchanged)
+    // Original Core Logic
     let masterData = [];
     let isViewMode = false;
     let filterTimeout;
@@ -359,11 +368,21 @@
         document.body.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
 
-        const saved = localStorage.getItem('professor_db_v3');
-        if(saved) {
-            masterData = JSON.parse(saved);
-            refreshUI();
-        }
+        // --- FIREBASE SYNC LISTENER ---
+        db.ref('professor_master_db').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                masterData = data;
+                refreshUI_Internal(); // Sync locally without triggering another Firebase write
+            } else {
+                // Fallback to local if Firebase is empty
+                const saved = localStorage.getItem('professor_db_v3');
+                if(saved) {
+                    masterData = JSON.parse(saved);
+                    refreshUI();
+                }
+            }
+        });
     };
 
     function toggleTheme() {
@@ -394,9 +413,20 @@
         reader.readAsArrayBuffer(e.target.files[0]);
     });
 
+    // Modified to push to Firebase
     function refreshUI() {
         if(masterData.length === 0) return;
+        
+        // Save to Local
         localStorage.setItem('professor_db_v3', JSON.stringify(masterData));
+        
+        // --- PUSH TO FIREBASE ---
+        db.ref('professor_master_db').set(masterData);
+
+        refreshUI_Internal();
+    }
+
+    function refreshUI_Internal() {
         document.getElementById('statMem').innerText = (JSON.stringify(masterData).length / 1024).toFixed(1) + " KB";
         document.getElementById('statTime').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         updateAnalytics();
@@ -427,7 +457,7 @@
         let html = '';
         filtered.forEach(r => {
             const originalIndex = masterData.indexOf(r);
-            const mapLink = (r[5] && r[6] && r[5] !== "0" && r[6] !== "0") ? `http://maps.google.com/?q=${r[5]},${r[6]}` : null;
+            const mapLink = (r[5] && r[6] && r[5] !== "0" && r[6] !== "0") ? `https://www.google.com/maps?q=${r[5]},${r[6]}` : null;
             
             html += `<tr>
                 <td style="color:var(--primary); font-weight:800;">${r[0] || '-'}</td>
@@ -515,6 +545,7 @@
         if(pass === atob(_0x4f22[4])) {
             if(confirm("Are you absolutely sure?")) { 
                 localStorage.removeItem('professor_db_v3'); 
+                db.ref('professor_master_db').remove(); // Clear Firebase too
                 location.reload(); 
             }
         } else {
